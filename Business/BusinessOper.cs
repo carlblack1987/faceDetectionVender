@@ -9700,6 +9700,32 @@ namespace Business
             return result;
         }
 
+        /// <summary>
+        /// 开始接收扫码支付结果数据
+        /// </summary>
+        /// <returns>结果代码</returns>
+        public int GetQRCodePaymentResult()
+        {
+            int intErrCode = 0;
+
+            m_GateSocket.StartRecvNetMainTrd();
+
+            return intErrCode;
+        }
+
+        /// <summary>
+        /// 停止接收扫码支付结果数据
+        /// </summary>
+        /// <returns>结果代码</returns>
+        public int StopQRCodePaymentResult()
+        {
+            int intErrCode = 0;
+
+            m_GateSocket.StopRecvNetMainTrd();
+
+            return intErrCode;
+        }
+
         #endregion
 
         #endregion

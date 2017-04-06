@@ -185,6 +185,7 @@
     <Compile Include="ManagerPage\VmDiagnose\FrmVmDiagnose_Tmp.xaml.cs">
       <DependentUpon>FrmVmDiagnose_Tmp.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Message\iVend_Message.cs" />
     <Compile Include="ShZyZPage\FrmShZyZ_Content.xaml.cs">
       <DependentUpon>FrmShZyZ_Content.xaml</DependentUpon>
     </Compile>
@@ -831,6 +832,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="ClassDiagram1.cd" />
     <None Include="ShZyZPage\app.config">
       <SubType>Designer</SubType>
     </None>

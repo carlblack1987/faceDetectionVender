@@ -40,6 +40,8 @@ using Emgu.Util;
 using Business.Model;
 using Business.Enum;
 using Demo;
+using System.IO.Pipes;
+using AutoSellGoodsMachine.Message;
 
 namespace AutoSellGoodsMachine
 {
@@ -63,6 +65,7 @@ namespace AutoSellGoodsMachine
         //MediaElement backgroundPlayer = null;
         VisualBrush vb_Background = null;
         private bool m_BackgroundPlay = false;
+
         #endregion
 
         #region 变量声明
@@ -187,6 +190,16 @@ namespace AutoSellGoodsMachine
         /// </summary>
         private faceDetectionAutoClose.faceDetectWin faceWin = null;
 
+        /// <summary>
+        /// 命名管道通信
+        /// </summary>
+        private NamedPipeServerStream _pipeServer = null;
+
+        /// <summary>
+        /// 命名管道名称
+        /// </summary>
+        private string pipeName = "iVendPipe";
+
         #endregion
 
         #endregion
@@ -205,6 +218,14 @@ namespace AutoSellGoodsMachine
             PubHelper.WriteSystemLog("iVend Soft Begin Run");
 
             PubHelper.p_BusinOper.OperStep = BusinessEnum.OperStep.Loading;
+
+            //樊晓孟 20170317新增：启动自动更新检测线程
+            startUpdateMonitorThread();
+
+            //樊晓孟 20170317新增：启动命名管道消息处理
+            Thread receiveDataThread = new Thread(new ThreadStart(ReceiveDataFromClient));
+            receiveDataThread.IsBackground = true;
+            receiveDataThread.Start();
 
             LoadWholePage("");
         }
@@ -824,7 +845,7 @@ namespace AutoSellGoodsMachine
 
                 panelProductList.RowDefinitions.Clear();
                 panelProductList.ColumnDefinitions.Clear();
-
+                 
                 AutoBulidPage.CreateRow(this.panelProductList, intRowCount);
                 AutoBulidPage.CreateColumn(this.panelProductList, intColumnCount);
 
@@ -5332,6 +5353,70 @@ namespace AutoSellGoodsMachine
                 //每隔一段时间刷新图片，这个时间不能设置得太小，不然容易导致内存崩溃
                 Thread.Sleep(90);
                 startPos = (startPos + 1) % size + 1;
+            }
+        }
+
+        #endregion
+
+        #region 与自动更新客户端进行通信交互
+
+        //启动自动更新客户端监控线程
+        private bool startUpdateMonitorThread()
+        {
+            string processName = "AutoUpdater_Client";
+            //return iVendMessages.Messages.startProcessByName(processName);
+            try
+            {
+                //首先关闭已经启动的客户端进程
+                if (iVend_Message.stopProcessByName(processName))
+                {
+                    Thread t = new Thread(new ParameterizedThreadStart(iVend_Message.startProcessByName));
+                    t.Start(processName);
+                }
+            }
+            catch (Exception e)
+            {
+                throw;
+            }
+            //return iVend_Message.startProcessByName(processName);
+            return true;
+        }
+
+        //接收来自更新客户端通过命名管道传输的消息
+        private void ReceiveDataFromClient()
+        {
+            while (true)
+            {
+                try
+                {
+                    _pipeServer = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 2);
+                    _pipeServer.WaitForConnection(); //Waiting
+                    StreamReader sr = new StreamReader(_pipeServer);
+                    string recData = sr.ReadLine();
+                    Console.WriteLine("Receive data: " + recData);
+                    //关闭客户端消息
+                    if (recData == iVend_Message.WM_CLOSE.ToString())
+                    {
+                        //Log.WriteLog("Pipe Exit.", _logFile);
+                        if ((PubHelper.p_BusinOper.OperStep == BusinessEnum.OperStep.Main) ||
+                        (PubHelper.p_BusinOper.OperStep == BusinessEnum.OperStep.InitErr))
+                        {
+                            this.Dispatcher.Invoke(new Action(() =>
+                            {
+                                this.Close();
+                            }));
+                        }
+                    }
+                    Thread.Sleep(1000);
+                    sr.Close();
+                    _pipeServer.Close();
+                    _pipeServer = null;
+                }
+                catch (Exception ex)
+                {
+                    //Log.WriteLog(ex.Message, _logFile);
+                    MessageBox.Show(ex.ToString());
+                }
             }
         }
 
